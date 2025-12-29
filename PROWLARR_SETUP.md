@@ -120,3 +120,5 @@ PROWLARR_API_KEY=your_api_key
 ## That's It!
 
 Once configured, BoxOffice will automatically use Prowlarr for all searches, giving you much better and more reliable results!
+
+

@@ -144,3 +144,5 @@ If qBittorrent is running on a different computer on your network:
 ## That's It!
 
 Once configured, BoxOffice will automatically use qBittorrent for all downloads, which is much more reliable than WebTorrent!
+
+
