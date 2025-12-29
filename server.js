@@ -150,6 +150,25 @@ app.get('/api/downloads/:id', (req, res) => {
   res.json({ download })
 })
 
+// Stop/Remove a download
+app.delete('/api/downloads/:id', (req, res) => {
+  try {
+    const download = downloadManager.getDownload(req.params.id)
+    if (!download) {
+      return res.status(404).json({ error: 'Download not found' })
+    }
+    
+    downloadManager.removeDownload(req.params.id)
+    res.json({ 
+      success: true, 
+      message: 'Download stopped and removed' 
+    })
+  } catch (error) {
+    console.error('Error removing download:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Serve React app for all other routes
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'frontend/build', 'index.html'))

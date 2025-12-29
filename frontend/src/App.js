@@ -10,6 +10,7 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [downloads, setDownloads] = useState([]);
   const [selectedMovies, setSelectedMovies] = useState(new Set());
+  const [sortBy, setSortBy] = useState('seeds'); // 'seeds', 'provider', 'size', 'title'
 
   useEffect(() => {
     // Poll for download updates
@@ -150,6 +151,58 @@ function App() {
     return formatTime(seconds);
   };
 
+  const getSortedResults = () => {
+    const sorted = [...results];
+    
+    switch (sortBy) {
+      case 'provider':
+        return sorted.sort((a, b) => {
+          const providerA = (a.provider || 'Unknown').toLowerCase();
+          const providerB = (b.provider || 'Unknown').toLowerCase();
+          return providerA.localeCompare(providerB);
+        });
+      case 'seeds':
+        return sorted.sort((a, b) => (b.seeds || 0) - (a.seeds || 0));
+      case 'size':
+        return sorted.sort((a, b) => {
+          // Convert size to bytes for comparison if needed
+          const sizeA = typeof a.size === 'number' ? a.size : 0;
+          const sizeB = typeof b.size === 'number' ? b.size : 0;
+          return sizeB - sizeA;
+        });
+      case 'title':
+        return sorted.sort((a, b) => {
+          const titleA = (a.movieMetadata?.title || a.title || '').toLowerCase();
+          const titleB = (b.movieMetadata?.title || b.title || '').toLowerCase();
+          return titleA.localeCompare(titleB);
+        });
+      default:
+        return sorted;
+    }
+  };
+
+  const handleStopDownload = async (downloadId) => {
+    if (!window.confirm('Are you sure you want to stop this download? This will stop seeding.')) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`${API_BASE}/downloads/${downloadId}`, {
+        method: 'DELETE',
+      });
+      
+      const data = await response.json();
+      if (response.ok) {
+        fetchDownloads(); // Refresh the list
+      } else {
+        alert(`Failed to stop download: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Error stopping download:', error);
+      alert('Failed to stop download. Please try again.');
+    }
+  };
+
   return (
     <div className="App">
       <header className="app-header">
@@ -203,9 +256,27 @@ function App() {
 
         {results.length > 0 && (
           <div className="results-section">
-            <h2>Search Results ({results.length})</h2>
+            <div className="results-header-with-sort">
+              <h2>Search Results ({results.length})</h2>
+              <div className="sort-controls">
+                <label htmlFor="sort-select" className="sort-label">
+                  Sort by:
+                </label>
+                <select
+                  id="sort-select"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="sort-select"
+                >
+                  <option value="seeds">🌱 Seeds (High to Low)</option>
+                  <option value="provider">🔗 Provider/Site</option>
+                  <option value="size">📦 Size (Large to Small)</option>
+                  <option value="title">📝 Title (A-Z)</option>
+                </select>
+              </div>
+            </div>
             <div className="results-grid">
-              {results.map((result) => (
+              {getSortedResults().map((result) => (
                 <div 
                   key={result.id} 
                   className={`result-card ${selectedMovies.has(result.id) ? 'selected' : ''}`}
@@ -323,12 +394,21 @@ function App() {
                             </span>
                           )}
                         </div>
-                        <span className={`download-status ${download.status}`}>
-                          {download.status === 'downloading' && '⬇️ Downloading'}
-                          {download.status === 'completed' && '✅ Completed'}
-                          {download.status === 'starting' && '🔄 Starting'}
-                          {download.status === 'error' && '❌ Error'}
-                        </span>
+                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                          <span className={`download-status ${download.status}`}>
+                            {download.status === 'downloading' && '⬇️ Downloading'}
+                            {download.status === 'completed' && '✅ Completed'}
+                            {download.status === 'starting' && '🔄 Starting'}
+                            {download.status === 'error' && '❌ Error'}
+                          </span>
+                          <button
+                            onClick={() => handleStopDownload(download.id)}
+                            className="stop-download-button"
+                            title="Stop download and seeding"
+                          >
+                            🛑 Stop
+                          </button>
+                        </div>
                       </div>
 
                       {download.status === 'downloading' && (
